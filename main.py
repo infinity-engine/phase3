@@ -5,13 +5,15 @@ import sys
 import matplotlib.pyplot as plt
 
 x_series = []
+simultaneousLDC = 0
+simultaneousLDL = 5
 
 
 class Objective:
     dictForObjectiveFunction = {}
     noOfFunctionEvaluations = 0
     penaltyFactor = 0
-    noOfVarAllProblem = [2, 0, 0, 2]
+    noOfVarAllProblem = [2, 2, 8, 2]
 
     def __init__(self, problemIndicator) -> None:
         self.problemIndicator = problemIndicator
@@ -29,9 +31,10 @@ class Objective:
         if self.problemIndicator == 1:
             result = (x[0]-10)**3+(x[1]-20)**3
         elif self.problemIndicator == 2:
-            pass
+            result = -(math.sin(2*math.pi*x[0])**3) * \
+                math.sin(2*math.pi*x[1])/(x[0]**3*(x[0]+x[1]))
         elif self.problemIndicator == 3:
-            pass
+            result = x[0]+x[1]+x[2]
         elif self.problemIndicator == 4:
             # test case
             result = (x[0]**2+x[1]-11)**2+(x[0]+x[1]**2-7)**2
@@ -52,15 +55,40 @@ class Objective:
             constraintViolation.append(
                 (x[0]-5)**2+(x[1]-5)**2-100
             )
-
-            # Also for variable lower bounds
             constraintViolation.append(x[0]-13)
             constraintViolation.append(x[1]-0)
-
+        elif self.problemIndicator == 2:
+            constraintViolation.append(x[0]-0)
+            constraintViolation.append(x[1]-0)
+        elif self.problemIndicator == 3:
+            constraintViolation.append(
+                x[0]-100
+            )
+            constraintViolation.append(
+                x[1]-1000
+            )
+            constraintViolation.append(
+                x[2]-1000
+            )
+            constraintViolation.append(
+                x[3]-10
+            )
+            constraintViolation.append(
+                x[4]-10
+            )
+            constraintViolation.append(
+                x[5]-10
+            )
+            constraintViolation.append(
+                x[6]-10
+            )
+            constraintViolation.append(
+                x[7]-10
+            )
         elif self.problemIndicator == 4:
             constraintViolation.append(
                 (x[0]-5)**2+x[1]**2-26
-                )
+            )
             constraintViolation.append(x[0]-0)
             constraintViolation.append(x[1]-0)
         else:
@@ -73,9 +101,60 @@ class Objective:
             constraintViolation.append(
                 (x[0]-6)**2+(x[1]-5)**2-82.81
             )
-            # Also for variable upper bounds
             constraintViolation.append(x[0]-20)
             constraintViolation.append(x[1]-4)
+        elif self.problemIndicator == 2:
+            constraintViolation.append(
+                x[0]**2-x[1]+1
+            )
+            constraintViolation.append(
+                1-x[0]+(x[1]-4)**2
+            )
+            constraintViolation.append(x[0]-10)
+            constraintViolation.append(x[1]-10)
+        elif self.problemIndicator == 3:
+            constraintViolation.append(
+                -1+0.0025*(x[3]+x[5])
+            )
+            constraintViolation.append(
+                -1+0.0025*(-x[3]+x[4]+x[6])
+            )
+            constraintViolation.append(
+                100*x[0]-x[0]*x[5]+8333.33252*x[3]-83333.33
+            )
+            constraintViolation.append(
+                x[1]*x[3]-x[1]*x[6]-1250*x[3]+1250*x[4]
+            )
+            constraintViolation.append(
+                x[2]*x[4]-x[2]*x[7]-2500*x[4]+1250000
+            )
+
+            # for variable bounds
+            constraintViolation.append(
+                x[0]-10000
+            )
+            constraintViolation.append(
+                x[1]-10000
+            )
+            constraintViolation.append(
+                x[2]-10000
+            )
+            constraintViolation.append(
+                x[3]-1000
+            )
+            constraintViolation.append(
+                x[4]-1000
+            )
+            constraintViolation.append(
+                x[5]-1000
+            )
+            constraintViolation.append(
+                x[6]-1000
+            )
+            constraintViolation.append(
+                x[7]-1000
+            )
+
         else:
             pass
         return constraintViolation
@@ -121,6 +200,18 @@ def partialDerivative(functionToOperate, variableIndicator, currentPoint):
     return (functionToOperate(*pointOne)-functionToOperate(*pointTwo))/(2*deltaX)
 
 
+def singleDerivative(functionToOperate, currentPoint):
+    deltaX = 10**-4
+    return (functionToOperate(currentPoint+deltaX)-functionToOperate(currentPoint-deltaX))/(2*deltaX)
+
+
+def doubleDerivative(functionToOperate, currentPoint):
+    deltaX = 10**-4
+    return (
+        singleDerivative(functionToOperate, currentPoint+deltaX) -
+        singleDerivative(functionToOperate, currentPoint-deltaX))/(2*deltaX)
+
+
 def gradiantOfFunction(functionToOperate, currentPoint):
     """Generate gradiant of a vector at a particular point
 
@@ -158,7 +249,7 @@ def boundingPhaseMethod(functionToOperate, delta, a, b):
     deltaWithSign = None
     k = 0
     maxIteration = 10000
-    initialRange = [a,b]
+    initialRange = [a, b]
     while True:
         # step 1
         x_0 = random.uniform(a, b)
@@ -219,7 +310,7 @@ def intervalHalvingMethod(functionToOperate, epsinol, a, b):
     x_m = (a+b)/2
     l = b-a
     no_of_iteration = 1
-    initialRange = [a,b]
+    initialRange = [a, b]
     while True:
         if no_of_iteration >= maxIteration:
             return initialRange
@@ -254,6 +345,25 @@ def intervalHalvingMethod(functionToOperate, epsinol, a, b):
             continue
 
 
+def newtonRaphsonMethod(functionToOperate, epsinon, initialPoint):
+    # step 1
+    #epsinol is set
+    k = 1
+    x_k = initialPoint
+
+    while(True):
+        # step 2 and step 3
+        x_new = x_k - singleDerivative(functionToOperate,
+                                       x_k) / doubleDerivative(functionToOperate, x_k)
+
+        # step 5
+        if abs(singleDerivative(functionToOperate, x_new)) <= epsinon or abs(x_k-x_new) <= 10**-3:
+            return x_new
+
+        x_k = x_new
+        k = k+1
+
+
 def changeToUniDirectionFunction(functionToOperate, x, s):
     """This is a function which will be used to scale the multivariable function
     into a single variable function using uni direction method.
@@ -278,6 +388,8 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         limits (list): in [lower,upper] format
         initialPoint (list): in [x0,x1,x2....] format
     """
+
+    global simultaneousLDC, simultaneousLDL
     angleForDependencyInDegree = 1
     # step 1
     a, b = limits
@@ -286,7 +398,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
     epsinolTwo = 10**-8
     epsinolThree = 10**-5
     k = 0
-    M = 1000
+    M = 100
     x_series = []  # store the x vextors
     x_series.append(x_0)
 
@@ -334,6 +446,8 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         s_k_1 = s_series[k-1][:, 0]  # row vector
         dotProduct = s_k @ s_k_1
         factor = np.linalg.norm(s_k)*np.linalg.norm(s_k_1)
+        if factor <= 10**-20:
+            return x_series[k]
         finalDotProduct = dotProduct/factor
         finalDotProduct = round(finalDotProduct, 3)
         dependencyCheck = math.acos(
@@ -341,6 +455,12 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         # print(dependencyCheck)
         if abs(dependencyCheck) < angleForDependencyInDegree:
             # Restart
+            if simultaneousLDC > simultaneousLDL:
+                # if theere is simultaneous restart then stop esecuting any more
+                # and return what you have
+                print(f"CG: Linear Dependancy Checker Overflowed. Iterations Count -> {k}")
+                return x_series[k]
+            simultaneousLDC = simultaneousLDC + 1
             print(f"Linear Dependency Found! Restarting with {x_series[k]}")
             return conjugateGradiantMethod(functionToOperate, limits, x_series[k])
 
@@ -383,10 +503,10 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
 
 def penaltyFunctionMethod(object, limits, initialPoint):
     # step 1
-    global x_series
-    epsinol = 10**-5
-    object.penaltyFactor = 0.1
-    c = 10
+    global x_series, simultaneousLDC
+    epsinol = 10**-10
+    object.penaltyFactor = 0.01
+    c = 1.2
     k = 0
     x_series.append(initialPoint)
 
@@ -395,6 +515,7 @@ def penaltyFunctionMethod(object, limits, initialPoint):
         # should be passed as an object->'object' to this method
 
         # step 3
+        simultaneousLDC = 0
         x_new = conjugateGradiantMethod(
             object.penaltyFunction, limits, x_series[k])
 
@@ -409,6 +530,19 @@ def penaltyFunctionMethod(object, limits, initialPoint):
         else:
             term_2 = object.penaltyFunction(*x_series[k])
         x_series.append(x_new)
+        
+        repetitionLimit = 10
+        repetitiveFlag = False
+        for n in range(repetitionLimit):
+            if len(x_series)<repetitionLimit:
+                break
+            else:
+                if list(x_series[-n-1]) != list(x_series[-n-2]):
+                    break
+                else:
+                    continue
+        else:
+            return x_new
 
         # termination condition
         if abs(term_1-term_2) <= epsinol:
@@ -419,5 +553,12 @@ def penaltyFunctionMethod(object, limits, initialPoint):
         k = k+1
 
 
-p1 = Objective(4)
-print(penaltyFunctionMethod(p1,[0,10],[0,0]))
+p1 = Objective(2)
+for i in range(1):
+    solution = penaltyFunctionMethod(p1, [0, 10], [4, -2,1,1,1,1,1,1])
+    print(f"""
+          Optimal Point            -> {solution}
+          Greter Constraint (g>=0) -> {p1.gtrInEquilityConstraint(*solution)}
+          Lower Constraint  (h<=0) -> {p1.lwrInwquilityConstraint(*solution)} 
+          Optimal Function Value   -> {p1.objectiveFunction(*solution)}
+          """)
