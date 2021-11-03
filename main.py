@@ -3,24 +3,36 @@ import math
 import random
 import sys
 import matplotlib.pyplot as plt
+from numpy import linalg
 
+# for stroring the x values in various iteration in penalty function method.
 x_series = []
+# count for simultaneous linear dependancy hit in conjugate gradiant method.
 simultaneousLDC = 0
+# maximum limit for simultaneous linear dependancy hit in conjugate gradiant method.
 simultaneousLDL = 5
+# is linear dependancy check required (inside CG Method)?
+isLDCRequired = True  # Default Value
 
 
 class Objective:
+    """Class which stores the objective of the problem
+    """
     dictForObjectiveFunction = {}
     noOfFunctionEvaluations = 0
     penaltyFactor = 0
-    noOfVarAllProblem = [2, 2, 8, 2]
+    noOfVarAllProblem = [2, 2, 8, 2, 2]
 
     def __init__(self, problemIndicator) -> None:
         self.problemIndicator = problemIndicator
         self.noOfVarCurProblem = self.noOfVarAllProblem[problemIndicator-1]
 
     def objectiveFunction(self, *x):
-        # check whether values are already stored or not.
+        """check whether values are already stored or not.
+
+        Returns:
+            number: objective function value
+        """
         if x in self.dictForObjectiveFunction:
             return self.dictForObjectiveFunction.get(x)
 
@@ -30,14 +42,20 @@ class Objective:
         # Problem 1
         if self.problemIndicator == 1:
             result = (x[0]-10)**3+(x[1]-20)**3
+        # Problem 2
         elif self.problemIndicator == 2:
             result = -(math.sin(2*math.pi*x[0])**3) * \
                 math.sin(2*math.pi*x[1])/(x[0]**3*(x[0]+x[1]))
+        # Problem 3
         elif self.problemIndicator == 3:
             result = x[0]+x[1]+x[2]
+        # Problem 4 -> Test Case
         elif self.problemIndicator == 4:
             # test case
             result = (x[0]**2+x[1]-11)**2+(x[0]+x[1]**2-7)**2
+        elif self.problemIndicator == 5:
+            # test case f=x^2+y^2 without constraint it should be f* = 0
+            result = x[0]**2+x[1]**2
         else:
             pass
 
@@ -47,132 +65,162 @@ class Objective:
         return result
 
     def equilityConstraint(self, *x):
+        """# Point to =0 constraint
+
+        Returns:
+            list: list of measures for the constraint functions.
+        """
         return []
 
     def gtrInEquilityConstraint(self, *x):
+        """# Point to >=0 constraint
+
+        Returns:
+            list: list of measures for the constraint functions.
+        """
         constraintViolation = []
         if self.problemIndicator == 1:
-            constraintViolation.append(
-                (x[0]-5)**2+(x[1]-5)**2-100
-            )
-            constraintViolation.append(x[0]-13)
-            constraintViolation.append(x[1]-0)
+            constraintViolation.extend([
+                (x[0]-5)**2+(x[1]-5)**2-100,
+                x[0]-13,
+                x[1]-0
+            ])
         elif self.problemIndicator == 2:
-            constraintViolation.append(x[0]-0)
-            constraintViolation.append(x[1]-0)
+            constraintViolation.extend([
+                x[0]-0,
+                x[1]-0
+            ])
         elif self.problemIndicator == 3:
-            constraintViolation.append(
-                x[0]-100
-            )
-            constraintViolation.append(
-                x[1]-1000
-            )
-            constraintViolation.append(
-                x[2]-1000
-            )
-            constraintViolation.append(
-                x[3]-10
-            )
-            constraintViolation.append(
-                x[4]-10
-            )
-            constraintViolation.append(
-                x[5]-10
-            )
-            constraintViolation.append(
-                x[6]-10
-            )
-            constraintViolation.append(
-                x[7]-10
-            )
+            constraintViolation.extend([
+                x[0]-0.01,
+                x[1]-0.1,
+                x[2]-0.1,
+                x[3]-0.01,
+                x[4]-0.01,
+                x[5]-0.01,
+                x[6]-0.01,
+                x[7]-0.01
+            ])
         elif self.problemIndicator == 4:
-            constraintViolation.append(
-                (x[0]-5)**2+x[1]**2-26
-            )
-            constraintViolation.append(x[0]-0)
-            constraintViolation.append(x[1]-0)
+            constraintViolation.extend([
+                (x[0]-5)**2+x[1]**2-26,
+                x[0]-0,
+                x[1]-0
+            ])
+        elif self.problemIndicator == 5:
+            constraintViolation.extend([
+                x[0]-2,
+                x[1]-2
+            ])
         else:
             pass
         return constraintViolation
 
-    def lwrInwquilityConstraint(self, *x):
+    def lwrInEquilityConstraint(self, *x):
+        """# Point to <=0 constraint
+
+        Returns:
+            list: list of measures for the constraint functions.
+        """
         constraintViolation = []
         if self.problemIndicator == 1:
-            constraintViolation.append(
-                (x[0]-6)**2+(x[1]-5)**2-82.81
-            )
-            constraintViolation.append(x[0]-20)
-            constraintViolation.append(x[1]-4)
+            constraintViolation.extend([
+                (x[0]-6)**2+(x[1]-5)**2-82.81,
+                x[0]-20,
+                x[1]-4
+            ])
         elif self.problemIndicator == 2:
-            constraintViolation.append(
-                x[0]**2-x[1]+1
-            )
-            constraintViolation.append(
-                1-x[0]+(x[1]-4)**2
-            )
-            constraintViolation.append(x[0]-10)
-            constraintViolation.append(x[1]-10)
+            constraintViolation.extend([
+                x[0]**2-x[1]+1,
+                1-x[0]+(x[1]-4)**2,
+                x[0]-10,
+                x[1]-10
+            ])
         elif self.problemIndicator == 3:
-            constraintViolation.append(
-                -1+0.0025*(x[3]+x[5])
-            )
-            constraintViolation.append(
-                -1+0.0025*(-x[3]+x[4]+x[6])
-            )
-            constraintViolation.append(
-                100*x[0]-x[0]*x[5]+8333.33252*x[3]-83333.33
-            )
-            constraintViolation.append(
-                x[1]*x[3]-x[1]*x[6]-1250*x[3]+1250*x[4]
-            )
-            constraintViolation.append(
-                x[2]*x[4]-x[2]*x[7]-2500*x[4]+1250000
-            )
-
-            # for variable bounds
-            constraintViolation.append(
-                x[0]-10000
-            )
-            constraintViolation.append(
-                x[1]-10000
-            )
-            constraintViolation.append(
-                x[2]-10000
-            )
-            constraintViolation.append(
-                x[3]-1000
-            )
-            constraintViolation.append(
-                x[4]-1000
-            )
-            constraintViolation.append(
-                x[5]-1000
-            )
-            constraintViolation.append(
-                x[6]-1000
-            )
-            constraintViolation.append(
-                x[7]-1000
-            )
+            constraintViolation.extend([
+                -1+2.5*(x[3]+x[5]),
+                -1+2.5*(-x[3]+x[4]+x[6]),
+                -1+10*(-x[5]+x[7]),
+                x[0]-10*x[0]*x[5]+0.833333252*x[3]-0.08333333,
+                x[1]*x[3]-x[1]*x[6]-0.1250*x[3]+0.1250*x[4],
+                x[2]*x[4]-x[2]*x[7]-0.25*x[4]+0.125,
+                x[0]-1,
+                x[1]-1,
+                x[2]-1,
+                x[3]-1,
+                x[4]-1,
+                x[5]-1,
+                x[6]-1,
+                x[7]-1
+            ])
 
         else:
             pass
         return constraintViolation
+
+    def constraintViolationStatus(self, *x):
+        """Provides status for constraint violation
+
+        Returns:
+            [[bool],[bool],[bool]]: equility, >=0 constraint, <=0 constraint
+        """
+        violation = []
+        eqViolation = []
+        gtrInEqViolation = []
+        lwrInEqViolation = []
+        for o in self.equilityConstraint(*x):
+            if o != 0:
+                eqViolation.append(True)
+            else:
+                eqViolation.append(False)
+        for m in self.gtrInEquilityConstraint(*x):
+            if m < 0:
+                gtrInEqViolation.append(True)
+            else:
+                gtrInEqViolation.append(False)
+        for n in self.lwrInEquilityConstraint(*x):
+            if n > 0:
+                lwrInEqViolation.append(True)
+            else:
+                lwrInEqViolation.append(False)
+
+        violation.extend([eqViolation, gtrInEqViolation, lwrInEqViolation])
+        return violation
+
+    def isConstraintViolated(self, *x):
+        """Gives the status whether any of the constraint is violated or not.
+
+        Returns:
+            bool: is constraint violated? yes -> True ; no -> False
+        """
+        for i in self.constraintViolationStatus(*x):
+            for j in i:
+                if j == True:
+                    return True
+                else:
+                    continue
+        return False
 
     def penaltyFunction(self, *x):
+        """Penalty function using objective function, constraint violation and also penalty factor.
+
+
+        Returns:
+            number: function value.
+        """
         penaltyTerm = 0
+        for o in self.equilityConstraint(*x):
+            pass
         for m in self.gtrInEquilityConstraint(*x):
             if m < 0:
                 penaltyTerm = penaltyTerm + self.penaltyFactor*(m**2)
             else:
                 pass
-        for n in self.lwrInwquilityConstraint(*x):
+        for n in self.lwrInEquilityConstraint(*x):
             if n > 0:
                 penaltyTerm = penaltyTerm + self.penaltyFactor*(n**2)
             else:
                 pass
-        for o in self.equilityConstraint(*x):
-            pass
 
         return self.objectiveFunction(*x)+penaltyTerm
 
@@ -267,8 +315,7 @@ def boundingPhaseMethod(functionToOperate, delta, a, b):
 
         while True:
             if k >= maxIteration:
-                return initialRange
-                #sys.exit("From Bounding Phase Method : No optimal point found")
+                sys.exit("From Bounding Phase Method : No optimal point found")
 
             # step 3
             x_new = x_0 + 2**k*deltaWithSign
@@ -313,8 +360,7 @@ def intervalHalvingMethod(functionToOperate, epsinol, a, b):
     initialRange = [a, b]
     while True:
         if no_of_iteration >= maxIteration:
-            return initialRange
-            #sys.exit("From Bounding Phase Method : No optimal point found")
+            sys.exit("From Bounding Phase Method : No optimal point found")
         # step2
         x_1 = a+l/4
         x_2 = b-l/4
@@ -389,7 +435,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         initialPoint (list): in [x0,x1,x2....] format
     """
 
-    global simultaneousLDC, simultaneousLDL
+    global simultaneousLDC, simultaneousLDL, isLDCRequired
     angleForDependencyInDegree = 1
     # step 1
     a, b = limits
@@ -398,14 +444,15 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
     epsinolTwo = 10**-8
     epsinolThree = 10**-5
     k = 0
-    M = 100
+    M = 100 # Maximum iteration for conjugate gradiant method.
     x_series = []  # store the x vextors
     x_series.append(x_0)
 
     # step2
     s_series = []  # store the direction vectors
     gradiantAtX_0 = gradiantOfFunction(functionToOperate, x_0)
-    s_series.append(-gradiantAtX_0)
+    # Add unit vector along the gradient for new search direction
+    s_series.append(np.divide(-gradiantAtX_0,np.linalg.norm(gradiantAtX_0))) 
     # print(x_series[-1],gradiantAtX_0)
     # Extra termination condition *****
     if (np.linalg.norm(gradiantAtX_0)) <= epsinolThree:
@@ -439,30 +486,35 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         t = p/r
         part_2_s = np.multiply(s_series[k-1], t)
         s = part_1_s + part_2_s
-        s_series.append(s)  # s_series size will become to k+1
+        s_series.append(np.divide(s,np.linalg.norm(s)))  # s_series size will become to k+1
 
         # code to check linear independance
-        s_k = s_series[k][:, 0]  # row vector
-        s_k_1 = s_series[k-1][:, 0]  # row vector
-        dotProduct = s_k @ s_k_1
-        factor = np.linalg.norm(s_k)*np.linalg.norm(s_k_1)
-        if factor <= 10**-20:
-            return x_series[k]
-        finalDotProduct = dotProduct/factor
-        finalDotProduct = round(finalDotProduct, 3)
-        dependencyCheck = math.acos(
-            finalDotProduct)*(180/math.pi)  # in degrees
-        # print(dependencyCheck)
-        if abs(dependencyCheck) < angleForDependencyInDegree:
-            # Restart
-            if simultaneousLDC > simultaneousLDL:
-                # if theere is simultaneous restart then stop esecuting any more
-                # and return what you have
-                print(f"CG: Linear Dependancy Checker Overflowed. Iterations Count -> {k}")
+        if isLDCRequired:
+            s_k = s_series[k][:, 0]  # row vector
+            s_k_1 = s_series[k-1][:, 0]  # row vector
+
+            dotProduct = s_k @ s_k_1
+            factor = np.linalg.norm(s_k)*np.linalg.norm(s_k_1)
+            if factor <= 10**-20:
+                # in case factor = 0; to avoid math error.
                 return x_series[k]
-            simultaneousLDC = simultaneousLDC + 1
-            print(f"Linear Dependency Found! Restarting with {x_series[k]}")
-            return conjugateGradiantMethod(functionToOperate, limits, x_series[k])
+            finalDotProduct = dotProduct/factor
+            finalDotProduct = round(finalDotProduct, 3)
+            dependencyCheck = math.acos(
+                finalDotProduct)*(180/math.pi)  # in degrees
+            # print(dependencyCheck)
+            if abs(dependencyCheck) < angleForDependencyInDegree:
+                # Restart
+                if simultaneousLDC > simultaneousLDL-1:
+                    # if theere is simultaneous restart then stop executing any more
+                    # and return what you have
+                    print(
+                        f"CG: LDC Overflowed. Proceeding without LDC checking.")
+                    isLDCRequired = False
+                simultaneousLDC = simultaneousLDC + 1
+                print(
+                    f"Linear Dependency Found! Restarting with {x_series[k]}")
+                return conjugateGradiantMethod(functionToOperate, limits, x_series[k])
 
         # step 5
         # convert multivariable function into single variable function
@@ -491,8 +543,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
                 return x_series[k+1]
 
         if factor <= epsinolThree or k+1 >= M:
-            # terminate the function
-            print(f"CG: Termination Point 3. Iterations Count -> {k+1}")
+            print(f"CG: Termination Point 3. Iterations Count -> {k}")
             return x_series[k+1]
         else:
             k += 1
@@ -503,12 +554,34 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
 
 def penaltyFunctionMethod(object, limits, initialPoint):
     # step 1
+    """Optimization method based on penalty function schema.
+        which is if a set of constraint is violated we will add a penalty term to the function
+
+    Args:
+        object (call back function: pointer to a function): Penalty function
+        limits (list): limits of variable, basically to be fend in to multi variable optimisation problem.
+        initialPoint (list): initial point from which search to be started
+
+    Returns:
+        list: optimal point of the penalty function.
+
+    Favourable Conditions:
+        Suitable Values for different objective function
+        P1: not found yet
+        P2: epsinol = 10^-10, penaltyFactor = 0.01, c = 1.2
+        P3: not found yet
+        P4: epsinol = 10^-2, penaltyFactor = 0.01, c = 5
+    """
+
     global x_series, simultaneousLDC
     epsinol = 10**-10
-    object.penaltyFactor = 0.01
-    c = 1.2
-    k = 0
+    object.penaltyFactor = 0.01  # setting the initial value of penalty factor
+    c = 5  # incremental factor for penalty factor
+    k = 0  # iteration count
     x_series.append(initialPoint)
+    maxIter = 10  # maximum iteration count after this it will find the any possible solution
+    superMaxIter = 100 # after this no execution will be done, it will stop there.
+    # and it will retrun the same solution at iteration 0, at that point we will stop.
 
     while(True):
         # step2
@@ -516,11 +589,13 @@ def penaltyFunctionMethod(object, limits, initialPoint):
 
         # step 3
         simultaneousLDC = 0
+        isLDCRequired = True
         x_new = conjugateGradiantMethod(
             object.penaltyFunction, limits, x_series[k])
-
+        x_series.append(x_new)
+        
         # step 4
-        term_1 = object.penaltyFunction(*x_new)
+        term_1 = object.penaltyFunction(*x_series[k+1])
         if k != 0:
             # calculate the penalty with the previous value of penalty factor
             object.penaltyFactor = object.penaltyFactor/c
@@ -528,37 +603,44 @@ def penaltyFunctionMethod(object, limits, initialPoint):
             # again reset the penalty factor as it is
             object.penaltyFactor = object.penaltyFactor*c
         else:
+            # calculate the penalty with the previous value of penalty factor
             term_2 = object.penaltyFunction(*x_series[k])
-        x_series.append(x_new)
+
         
-        repetitionLimit = 10
-        repetitiveFlag = False
-        for n in range(repetitionLimit):
-            if len(x_series)<repetitionLimit:
-                break
-            else:
-                if list(x_series[-n-1]) != list(x_series[-n-2]):
-                    break
-                else:
-                    continue
-        else:
-            return x_new
 
-        # termination condition
+        # termination conditions
         if abs(term_1-term_2) <= epsinol:
+            print("PFM: Termination 1")
             return x_new
-
+        
+        if np.linalg.norm(np.array(x_series[k+1])-np.array(x_series[k]))/(np.linalg.norm(x_series[k])) <= epsinol:
+            # If the two consecutive solutions are very close.
+            print("PFM: Termination 2")
+            return x_new
+        
+        
         # step 5
         object.penaltyFactor = object.penaltyFactor*c
         k = k+1
+        if k >= superMaxIter:
+            sys.exit("\nPFM: No optimal point found.\n")
+        if k >= maxIter:
+            # if iteration count crosses the maximum limit, then retrun any possible value
+            # from the point the current point is
+            if object.isConstraintViolated(*x_new) != True:
+                print(
+                    "\nPFM: Iteration Count Overflowed! Returning closest possible value.\n")
+                return x_new
 
 
-p1 = Objective(2)
+p1 = Objective(3)
 for i in range(1):
-    solution = penaltyFunctionMethod(p1, [0, 10], [4, -2,1,1,1,1,1,1])
+    solution = penaltyFunctionMethod(
+        p1, [-10, 10], [10,10,10,10,10,10,10,10])
     print(f"""
-          Optimal Point            -> {solution}
-          Greter Constraint (g>=0) -> {p1.gtrInEquilityConstraint(*solution)}
-          Lower Constraint  (h<=0) -> {p1.lwrInwquilityConstraint(*solution)} 
-          Optimal Function Value   -> {p1.objectiveFunction(*solution)}
+          Optimal Point             -> {solution}
+          Greater Constraint (g>=0) -> {p1.gtrInEquilityConstraint(*solution)}
+          Lower Constraint  (h<=0)  -> {p1.lwrInEquilityConstraint(*solution)} 
+          Optimal Function Value    -> {p1.objectiveFunction(*solution)}
           """)
+print("\t\t\t\t ---End---")
