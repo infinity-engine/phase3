@@ -159,7 +159,7 @@ class Objective:
         return constraintViolation
 
     def constraintViolationStatus(self, *x):
-        """Provides status for constraint violation
+        """# Provides status for constraint violation
 
         Returns:
             [[bool],[bool],[bool]]: equility, >=0 constraint, <=0 constraint
@@ -300,7 +300,9 @@ def boundingPhaseMethod(functionToOperate, delta, a, b):
     initialRange = [a, b]
     while True:
         # step 1
-        x_0 = random.uniform(a, b)
+        series = [0, 1, 2, 3, 4, 5]
+        ind = math.trunc(random.uniform(0, len(series)))
+        x_0 = series[ind]
         if (x_0 == a or x_0 == b):
             continue
 
@@ -440,11 +442,11 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
     # step 1
     a, b = limits
     x_0 = list(initialPoint)
-    epsinolOne = 10**-8
-    epsinolTwo = 10**-8
+    epsinolOne = 10**-5
+    epsinolTwo = 10**-5
     epsinolThree = 10**-5
     k = 0
-    M = 100 # Maximum iteration for conjugate gradiant method.
+    M = 10**5  # Maximum iteration for conjugate gradiant method.
     x_series = []  # store the x vextors
     x_series.append(x_0)
 
@@ -452,7 +454,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
     s_series = []  # store the direction vectors
     gradiantAtX_0 = gradiantOfFunction(functionToOperate, x_0)
     # Add unit vector along the gradient for new search direction
-    s_series.append(np.divide(-gradiantAtX_0,np.linalg.norm(gradiantAtX_0))) 
+    s_series.append(np.divide(-gradiantAtX_0, np.linalg.norm(gradiantAtX_0)))
     # print(x_series[-1],gradiantAtX_0)
     # Extra termination condition *****
     if (np.linalg.norm(gradiantAtX_0)) <= epsinolThree:
@@ -486,7 +488,8 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         t = p/r
         part_2_s = np.multiply(s_series[k-1], t)
         s = part_1_s + part_2_s
-        s_series.append(np.divide(s,np.linalg.norm(s)))  # s_series size will become to k+1
+        # s_series size will become to k+1
+        s_series.append(np.divide(s, np.linalg.norm(s)))
 
         # code to check linear independance
         if isLDCRequired:
@@ -509,11 +512,11 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
                     # if theere is simultaneous restart then stop executing any more
                     # and return what you have
                     print(
-                        f"CG: LDC Overflowed. Proceeding without LDC checking.")
+                        f"CG: LDC Overflowed. Will be procedding without LDC checking, onwards.")
                     isLDCRequired = False
                 simultaneousLDC = simultaneousLDC + 1
                 print(
-                    f"Linear Dependency Found! Restarting with {x_series[k]}")
+                    f"CG: Linear Dependency Found! Restarting with {x_series[k]}")
                 return conjugateGradiantMethod(functionToOperate, limits, x_series[k])
 
         # step 5
@@ -552,7 +555,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         break
 
 
-def penaltyFunctionMethod(object, limits, initialPoint):
+def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFactor=0.01,c=5):
     # step 1
     """Optimization method based on penalty function schema.
         which is if a set of constraint is violated we will add a penalty term to the function
@@ -561,29 +564,27 @@ def penaltyFunctionMethod(object, limits, initialPoint):
         object (call back function: pointer to a function): Penalty function
         limits (list): limits of variable, basically to be fend in to multi variable optimisation problem.
         initialPoint (list): initial point from which search to be started
-
+        epsinol (number): accuracy
+        penaltyFactor (number): starting penalty factor
+        c (number): incremental factor for penalty factor
+        
     Returns:
         list: optimal point of the penalty function.
 
-    Favourable Conditions:
-        Suitable Values for different objective function
-        P1: not found yet
-        P2: epsinol = 10^-10, penaltyFactor = 0.01, c = 1.2
-        P3: not found yet
-        P4: epsinol = 10^-2, penaltyFactor = 0.01, c = 5
     """
 
     global x_series, simultaneousLDC
-    epsinol = 10**-10
-    object.penaltyFactor = 0.01  # setting the initial value of penalty factor
-    c = 5  # incremental factor for penalty factor
+    object.penaltyFactor = penaltyFactor  # setting the initial value of penalty factor
     k = 0  # iteration count
     x_series.append(initialPoint)
-    maxIter = 10  # maximum iteration count after this it will find the any possible solution
-    superMaxIter = 100 # after this no execution will be done, it will stop there.
+    maxIter = 50  # maximum iteration count after this it will find the any possible solution
+    # after this no execution will be done, it will stop there.
+    superMaxIter = 1000
     # and it will retrun the same solution at iteration 0, at that point we will stop.
 
     while(True):
+        print(f"\nPFM:Penalty Factor -> {object.penaltyFactor}")
+        print(f"PFM:Current Point -> {x_series[k]}\n")
         # step2
         # should be passed as an object->'object' to this method
 
@@ -593,7 +594,7 @@ def penaltyFunctionMethod(object, limits, initialPoint):
         x_new = conjugateGradiantMethod(
             object.penaltyFunction, limits, x_series[k])
         x_series.append(x_new)
-        
+
         # step 4
         term_1 = object.penaltyFunction(*x_series[k+1])
         if k != 0:
@@ -606,24 +607,21 @@ def penaltyFunctionMethod(object, limits, initialPoint):
             # calculate the penalty with the previous value of penalty factor
             term_2 = object.penaltyFunction(*x_series[k])
 
-        
-
         # termination conditions
         if abs(term_1-term_2) <= epsinol:
             print("PFM: Termination 1")
             return x_new
-        
+
         if np.linalg.norm(np.array(x_series[k+1])-np.array(x_series[k]))/(np.linalg.norm(x_series[k])) <= epsinol:
             # If the two consecutive solutions are very close.
             print("PFM: Termination 2")
             return x_new
-        
-        
+
         # step 5
         object.penaltyFactor = object.penaltyFactor*c
         k = k+1
         if k >= superMaxIter:
-            sys.exit("\nPFM: No optimal point found.\n")
+            sys.exit("\nPFM: SuperMax Iteration Overflowed.\n")
         if k >= maxIter:
             # if iteration count crosses the maximum limit, then retrun any possible value
             # from the point the current point is
@@ -633,14 +631,50 @@ def penaltyFunctionMethod(object, limits, initialPoint):
                 return x_new
 
 
-p1 = Objective(3)
-for i in range(1):
+def start():
+    global x_axis
+    problemSettings = {
+        1:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5},
+        2:{"epsinol":10**-10,"penaltyFactor":0.01,"c":1.2},
+        3:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5},
+        4:{"epsinol":10**-2,"penaltyFactor":0.01,"c":5},
+        5:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5}
+        }
+    out = open(r"PFM_iterations.out", "w")
+    out.write("x\tPenalty Function Value\tObjective Function Value\n")
+    objectiveFunctionIndicator = int(input("Enter function indicator : \t"))
+    limits = [-10, 10]
+    if objectiveFunctionIndicator == 3:
+        initialChoice = [1, 1, 1, 1, 1, 1, 1, 1]
+    else:
+        initialChoice = [1, 1]
+    p = Objective(objectiveFunctionIndicator)
+    currentSettings = problemSettings.get(objectiveFunctionIndicator) # gives a dictionary
     solution = penaltyFunctionMethod(
-        p1, [-10, 10], [10,10,10,10,10,10,10,10])
+        p, limits, initialChoice,currentSettings['epsinol'],currentSettings['penaltyFactor'],currentSettings['c'])
+
     print(f"""
           Optimal Point             -> {solution}
-          Greater Constraint (g>=0) -> {p1.gtrInEquilityConstraint(*solution)}
-          Lower Constraint  (h<=0)  -> {p1.lwrInEquilityConstraint(*solution)} 
-          Optimal Function Value    -> {p1.objectiveFunction(*solution)}
+          Greater Constraint (g>=0) -> {p.gtrInEquilityConstraint(*solution)}
+          Lower Constraint  (h<=0)  -> {p.lwrInEquilityConstraint(*solution)} 
+          Optimal Function Value    -> {p.objectiveFunction(*solution)}
           """)
-print("\t\t\t\t ---End---")
+    print("\t\t\t\t ---End---")
+
+    # For ploting
+    x_axis = range(len(x_series))
+    y1_axis = []
+    y2_axis = []
+    for x in x_series:
+        y1_axis.append(p.penaltyFunction(*x))
+        y2_axis.append(p.objectiveFunction(*x))
+        out.write(f"{x}\t{p.penaltyFunction(*x)}\t{p.objectiveFunction(*x)}\n")
+    plt.plot(x_axis, y1_axis, "r*-")
+    plt.plot(x_axis,y2_axis, "b^-")
+    plt.xlabel("Iteration Count")
+    plt.ylabel("Penalty Function")
+    plt.legend(["Penalty Function","Objective Function"])
+    plt.show()
+
+
+start()
