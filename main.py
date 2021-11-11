@@ -141,7 +141,7 @@ class Objective:
                 -1+2.5*(x[3]+x[5]),
                 -1+2.5*(-x[3]+x[4]+x[6]),
                 -1+10*(-x[5]+x[7]),
-                x[0]-10*x[0]*x[5]+0.833333252*x[3]-0.08333333,
+                x[0]-10*x[0]*x[5]+8.3333252*x[3]-0.083333333,
                 x[1]*x[3]-x[1]*x[6]-0.1250*x[3]+0.1250*x[4],
                 x[2]*x[4]-x[2]*x[7]-0.25*x[4]+0.125,
                 x[0]-1,
@@ -555,7 +555,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         break
 
 
-def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFactor=0.01,c=5):
+def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2=10**-5,penaltyFactor=0.01,c=5):
     # step 1
     """Optimization method based on penalty function schema.
         which is if a set of constraint is violated we will add a penalty term to the function
@@ -564,7 +564,8 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFact
         object (call back function: pointer to a function): Penalty function
         limits (list): limits of variable, basically to be fend in to multi variable optimisation problem.
         initialPoint (list): initial point from which search to be started
-        epsinol (number): accuracy
+        epsinol_1 (number): for termination condition 1
+        epsinol_2 (number): for termination condition 2
         penaltyFactor (number): starting penalty factor
         c (number): incremental factor for penalty factor
         
@@ -579,7 +580,7 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFact
     x_series.append(initialPoint)
     maxIter = 50  # maximum iteration count after this it will find the any possible solution
     # after this no execution will be done, it will stop there.
-    superMaxIter = 1000
+    superMaxIter = 10000
     # and it will retrun the same solution at iteration 0, at that point we will stop.
 
     while(True):
@@ -608,14 +609,16 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFact
             term_2 = object.penaltyFunction(*x_series[k])
 
         # termination conditions
-        if abs(term_1-term_2) <= epsinol:
+        if abs(term_1-term_2) <= epsinol_1:
             print("PFM: Termination 1")
             return x_new
 
-        if np.linalg.norm(np.array(x_series[k+1])-np.array(x_series[k]))/(np.linalg.norm(x_series[k])) <= epsinol:
+        if np.linalg.norm(np.array(x_series[k+1])-np.array(x_series[k]))/(np.linalg.norm(x_series[k])) <= epsinol_2:
             # If the two consecutive solutions are very close.
-            print("PFM: Termination 2")
-            return x_new
+            print(object.isConstraintViolated(*x_series[k+1]))
+            if not object.isConstraintViolated(*x_series[k+1]):
+                print("PFM: Termination 2")
+                return x_new
 
         # step 5
         object.penaltyFactor = object.penaltyFactor*c
@@ -634,11 +637,11 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol=10^-5,penaltyFact
 def start():
     global x_axis
     problemSettings = {
-        1:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5},
-        2:{"epsinol":10**-10,"penaltyFactor":0.01,"c":1.2},
-        3:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5},
-        4:{"epsinol":10**-2,"penaltyFactor":0.01,"c":5},
-        5:{"epsinol":10**-5,"penaltyFactor":0.01,"c":5}
+        1:{"epsinol_1":10**-5,"epsinol_2":10**-4,"penaltyFactor":0.01,"c":5},
+        2:{"epsinol_1":10**-10,"epsinol_2":10**-10,"penaltyFactor":0.01,"c":1.2},
+        3:{"epsinol_1":10**-5,"epsinol_2":10**-3,"penaltyFactor":18000,"c":1.0001},
+        4:{"epsinol_1":10**-2,"epsinol_2":10**-2,"penaltyFactor":0.01,"c":5},
+        5:{"epsinol_1":10**-5,"epsinol_2":10**-5,"penaltyFactor":0.01,"c":5}
         }
     out = open(r"PFM_iterations.out", "w")
     out.write("x\tPenalty Function Value\tObjective Function Value\n")
@@ -649,9 +652,9 @@ def start():
     else:
         initialChoice = [1, 1]
     p = Objective(objectiveFunctionIndicator)
-    currentSettings = problemSettings.get(objectiveFunctionIndicator) # gives a dictionary
+    currentSettings = problemSettings.get(objectiveFunctionIndicator) # a dictionary
     solution = penaltyFunctionMethod(
-        p, limits, initialChoice,currentSettings['epsinol'],currentSettings['penaltyFactor'],currentSettings['c'])
+        p, limits, initialChoice,currentSettings['epsinol_1'],currentSettings['epsinol_2'],currentSettings['penaltyFactor'],currentSettings['c'])
 
     print(f"""
           Optimal Point             -> {solution}
