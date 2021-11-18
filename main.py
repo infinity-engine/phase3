@@ -13,6 +13,8 @@ simultaneousLDC = 0
 simultaneousLDL = 5
 # is linear dependancy check required (inside CG Method)?
 isLDCRequired = True  # Default Value
+# Stores Function Evaluation at all the iteration
+pfmFCountSeries = []
 
 np.seterr(all='raise')
 
@@ -305,13 +307,13 @@ def boundingPhaseMethod(functionToOperate, delta, a, b):
     while True:
         # step 1
         if attmptCount >= maxAttmpt:
-            #let region elimination method handle this task
-            return [a,b]
+            # let region elimination method handle this task
+            return [a, b]
         series = [0, 1, 2, 3, 4, 5]
         ind = math.trunc(random.uniform(0, len(series)))
         x_0 = series[ind]
         if (x_0 == a or x_0 == b):
-            attmptCount = attmptCount +1
+            attmptCount = attmptCount + 1
             continue
 
         # step 2
@@ -321,7 +323,7 @@ def boundingPhaseMethod(functionToOperate, delta, a, b):
         elif functionToOperate(x_0 - abs(delta)) <= functionToOperate(x_0) and functionToOperate(x_0 + abs(delta)) >= functionToOperate(x_0):
             deltaWithSign = - abs(delta)
         else:
-            attmptCount = attmptCount +1
+            attmptCount = attmptCount + 1
             continue
 
         while True:
@@ -569,7 +571,7 @@ def conjugateGradiantMethod(functionToOperate, limits, initialPoint):
         break
 
 
-def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2=10**-5,penaltyFactor=0.01,c=5):
+def penaltyFunctionMethod(object, limits, initialPoint, epsinol_1=10 ^ -5, epsinol_2=10**-5, penaltyFactor=0.01, c=5):
     # step 1
     """Optimization method based on penalty function schema.
         which is if a set of constraint is violated we will add a penalty term to the function
@@ -582,14 +584,15 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2
         epsinol_2 (number): for termination condition 2
         penaltyFactor (number): starting penalty factor
         c (number): incremental factor for penalty factor
-        
+
     Returns:
         list: optimal point of the penalty function.
 
     """
-
-    global x_series, simultaneousLDC
-    object.penaltyFactor = penaltyFactor  # setting the initial value of penalty factor
+    # step 1
+    global x_series, simultaneousLDC, pfmFCountSeries
+    # setting the initial value of penalty factor
+    object.penaltyFactor = penaltyFactor
     k = 0  # iteration count
     x_series.append(initialPoint)
     maxIter = 50  # maximum iteration count after this it will find the any possible solution
@@ -598,6 +601,7 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2
     # and it will retrun the same solution at iteration 0, at that point we will stop.
 
     while(True):
+        fCountOffset = object.noOfFunctionEvaluations
         print(f"\nPFM:Penalty Factor -> {object.penaltyFactor}")
         print(f"PFM:Current Point -> {x_series[k]}\n")
         # step2
@@ -609,6 +613,7 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2
         x_new = conjugateGradiantMethod(
             object.penaltyFunction, limits, x_series[k])
         x_series.append(x_new)
+        pfmFCountSeries.append(object.noOfFunctionEvaluations-fCountOffset)
 
         # step 4
         term_1 = object.penaltyFunction(*x_series[k+1])
@@ -629,7 +634,7 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2
 
         if np.linalg.norm(np.array(x_series[k+1])-np.array(x_series[k]))/(np.linalg.norm(x_series[k])) <= epsinol_2:
             # If the two consecutive solutions are very close.
-            #print(object.isConstraintViolated(*x_series[k+1]))
+            # print(object.isConstraintViolated(*x_series[k+1]))
             if not object.isConstraintViolated(*x_series[k+1]):
                 print("PFM: Termination 2")
                 return x_new
@@ -651,12 +656,12 @@ def penaltyFunctionMethod(object, limits, initialPoint,epsinol_1=10^-5,epsinol_2
 def start():
     global x_axis
     problemSettings = {
-        1:{"epsinol_1":10**-4,"epsinol_2":10**-3,"penaltyFactor":100,"c":10},
-        2:{"epsinol_1":10**-10,"epsinol_2":10**-10,"penaltyFactor":0.01,"c":1.2},
-        3:{"epsinol_1":10**-5,"epsinol_2":10**-3,"penaltyFactor":18000,"c":1.0001},
-        4:{"epsinol_1":10**-2,"epsinol_2":10**-2,"penaltyFactor":0.01,"c":5},
-        5:{"epsinol_1":10**-5,"epsinol_2":10**-5,"penaltyFactor":0.01,"c":5}
-        }
+        1: {"epsinol_1": 10**-4, "epsinol_2": 10**-3, "penaltyFactor": 100, "c": 10},
+        2: {"epsinol_1": 10**-10, "epsinol_2": 10**-10, "penaltyFactor": 0.01, "c": 1.2},
+        3: {"epsinol_1": 10**-5, "epsinol_2": 10**-3, "penaltyFactor": 18000, "c": 1.0001},
+        4: {"epsinol_1": 10**-2, "epsinol_2": 10**-2, "penaltyFactor": 0.01, "c": 5},
+        5: {"epsinol_1": 10**-5, "epsinol_2": 10**-5, "penaltyFactor": 0.01, "c": 5}
+    }
     out = open(r"PFM_iterations.out", "w")
     out.write("x\tPenalty Function Value\tObjective Function Value\n")
     objectiveFunctionIndicator = int(input("Enter function indicator : \t"))
@@ -667,9 +672,10 @@ def start():
         initialChoice = [1, 1]
     for i in range(1):
         p = Objective(objectiveFunctionIndicator)
-        currentSettings = problemSettings.get(objectiveFunctionIndicator) # a dictionary
+        currentSettings = problemSettings.get(
+            objectiveFunctionIndicator)  # a dictionary
         solution = penaltyFunctionMethod(
-            p, limits, initialChoice,currentSettings['epsinol_1'],currentSettings['epsinol_2'],currentSettings['penaltyFactor'],currentSettings['c'])
+            p, limits, initialChoice, currentSettings['epsinol_1'], currentSettings['epsinol_2'], currentSettings['penaltyFactor'], currentSettings['c'])
 
         print(f"""
             Optimal Point             -> {solution}
@@ -680,6 +686,7 @@ def start():
         print("\t\t\t\t ---End---")
 
     # For ploting
+    plt.subplot(2, 1, 1)
     x_axis = range(len(x_series))
     y1_axis = []
     y2_axis = []
@@ -688,10 +695,15 @@ def start():
         y2_axis.append(p.objectiveFunction(*x))
         out.write(f"{x}\t{p.penaltyFunction(*x)}\t{p.objectiveFunction(*x)}\n")
     plt.plot(x_axis, y1_axis, "r*-")
-    plt.plot(x_axis,y2_axis, "b^-")
+    plt.plot(x_axis, y2_axis, "b^-.")
     plt.xlabel("Iteration Count")
-    plt.ylabel("Penalty Function")
-    plt.legend(["Penalty Function","Objective Function"])
+    plt.ylabel("Function Value")
+    plt.legend(["Penalty Function", "Objective Function"])
+    plt.subplot(2, 1, 2)
+    plt.plot(pfmFCountSeries, "ys:")
+    plt.xlabel("Iteration Count")
+    plt.ylabel("Function Evaluations")
+    plt.legend(["Function Evaluations"])
     plt.show()
 
 
