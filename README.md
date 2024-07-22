@@ -29,7 +29,7 @@ Clone the repository and navigate to the project directory. Run the scripts to s
 
 ```bash
 python main.py
-
+```
 
 
 ## Authors
